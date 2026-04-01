@@ -13,7 +13,8 @@ def index():
 @app.route('/api/flights')
 def get_flights_api():
     # Load fresh data from API on request
-    manager.load_data()
+    is_arrival = request.args.get('arrival', 'false').lower() == 'true'
+    manager.load_data(is_arrival=is_arrival)
     
     status = request.args.get('status', 'all')
     query = request.args.get('query', '')
