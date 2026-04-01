@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HKIA Flight Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #ffffff;
+        }
+        .flight-row {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .flight-row:hover {
+            background-color: #f9fafb;
+        }
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .status-on-time { background-color: #ecfdf5; color: #059669; }
+        .status-delayed { background-color: #fffbeb; color: #d97706; }
+        .status-boarding { background-color: #eff6ff; color: #2563eb; }
+        .status-cancelled { background-color: #fef2f2; color: #dc2626; }
+        .status-departed { background-color: #f3f4f6; color: #6b7280; }
+    </style>
+</head>
+<body class="text-gray-900">
+
+    <div class="max-w-6xl mx-auto px-4 py-12">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 space-y-4 md:space-y-0">
+            <div>
+                <h1 class="text-4xl font-light tracking-tight text-gray-900">FLIGHT <span class="font-semibold">DEPARTURES</span></h1>
+                <p class="text-gray-500 mt-2 text-sm uppercase tracking-widest">Hong Kong International Airport (HKIA)</p>
+            </div>
+            <div class="text-right">
+                <div id="current-time" class="text-3xl font-light tabular-nums">00:00:00</div>
+                <div id="current-date" class="text-gray-400 text-xs uppercase tracking-wider mt-1">October 24, 2024</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center mb-10">
+            <div class="flex space-x-2 overflow-x-auto pb-2 md:pb-0">
+                <button onclick="filterStatus('all', event)" class="filter-btn px-6 py-2 text-sm font-medium rounded-full bg-gray-900 text-white transition-colors">ALL FLIGHTS</button>
+                <button onclick="filterStatus('boarding', event)" class="filter-btn px-6 py-2 text-sm font-medium rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">BOARDING</button>
+                <button onclick="filterStatus('on-time', event)" class="filter-btn px-6 py-2 text-sm font-medium rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">ON TIME</button>
+                <button onclick="filterStatus('delayed', event)" class="filter-btn px-6 py-2 text-sm font-medium rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">DELAYED</button>
+                <button onclick="filterStatus('departed', event)" class="filter-btn px-6 py-2 text-sm font-medium rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">DEPARTED</button>
+            </div>
+        </div>
+
+        <!-- Board -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100">
+                        <th class="px-4 py-4 font-medium">TIME</th>
+                        <th class="px-4 py-4 font-medium">FLIGHT</th>
+                        <th class="px-4 py-4 font-medium">DESTINATION</th>
+                        <th class="px-4 py-4 font-medium">GATE</th>
+                        <th class="px-4 py-4 font-medium text-right">STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="flight-table-body">
+                    <!-- Data injected by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="mt-8 pt-8 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+            <p>© 2026 HKIA Information System</p>
+            <div class="flex items-center space-x-4">
+                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span> Real-time Data</span>
+                <span id="last-updated">Last update: Just now</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'all';
+
+        async function fetchFlights(status = 'all') {
+            try {
+                const response = await fetch(`/api/flights?status=${status}`);
+                const data = await response.json();
+                renderFlights(data);
+            } catch (error) {
+                console.error('Error fetching flights:', error);
+            }
+        }
+
+        function renderFlights(data) {
+            const tbody = document.getElementById('flight-table-body');
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-12 text-center text-gray-400 italic">No flights found matching the criteria.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map(flight => `
+                <tr class="flight-row">
+                    <td class="px-4 py-6 font-medium tabular-nums text-gray-600">${flight.time}</td>
+                    <td class="px-4 py-6 text-blue-600 font-semibold tracking-wide">${flight.id}</td>
+                    <td class="px-4 py-6 font-medium text-gray-800">${flight.destination}</td>
+                    <td class="px-4 py-6 text-gray-500 font-mono">${flight.gate}</td>
+                    <td class="px-4 py-6 text-right">
+                        <span class="status-pill ${flight.class}">${flight.status}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        function filterStatus(status, event) {
+            currentFilter = status;
+            const btns = document.querySelectorAll('.filter-btn');
+            btns.forEach(btn => {
+                btn.classList.remove('bg-gray-900', 'text-white');
+                btn.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
+            });
+
+            const currentBtn = event.currentTarget;
+            currentBtn.classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
+            currentBtn.classList.add('bg-gray-900', 'text-white');
+
+            fetchFlights(status);
+        }
+
+        // Initialize
+        updateTime();
+        setInterval(updateTime, 1000);
+        fetchFlights();
+        
+        // Auto refresh flights every 60 seconds
+        setInterval(() => fetchFlights(currentFilter), 60000);
+    </script>
+</body>
+</html>
