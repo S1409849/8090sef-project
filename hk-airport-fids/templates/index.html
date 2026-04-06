@@ -112,30 +112,42 @@
     </div>
 
     <script>
-        let isArrival = false;
-        let currentStatusFilter = 'all';
-        let searchQuery = '';
-        let searchTimeout;
+        // Application state
+        let isArrival = false;             // Toggle between Arrival and Departure modes
+        let currentStatusFilter = 'all';   // Current active status filter
+        let searchQuery = '';              // Current search text
+        let searchTimeout;                 // Timeout for debouncing search input
 
+        /**
+         * Switch between Departure and Arrival modes.
+         * Updates UI elements and refetches data.
+         */
         function setMode(arrival) {
             isArrival = arrival;
             
-            // UI Updates
+            // Update mode title and color theme
             document.getElementById('mode-title').textContent = isArrival ? 'ARRIVALS' : 'DEPARTURES';
             document.getElementById('mode-title').className = isArrival ? 'font-semibold text-green-600' : 'font-semibold text-blue-600';
+            
+            // Update table headers based on mode
             document.getElementById('location-header').textContent = isArrival ? 'ORIGIN' : 'DESTINATION';
             document.getElementById('gate-header').textContent = isArrival ? 'HALL/STAND' : 'GATE';
             
+            // Toggle active state on mode buttons
             document.getElementById('dep-toggle').classList.toggle('toggle-active', !isArrival);
             document.getElementById('dep-toggle').classList.toggle('text-gray-600', isArrival);
             document.getElementById('arr-toggle').classList.toggle('toggle-active', isArrival);
             document.getElementById('arr-toggle').classList.toggle('text-gray-600', !isArrival);
             
+            // Refresh filters and fetch new data
             updateFilters();
             resetFilters();
             fetchFlights();
         }
 
+        /**
+         * Update the status filter buttons based on the current mode.
+         */
         function updateFilters() {
             const container = document.getElementById('dynamic-filters');
             if (isArrival) {
@@ -151,6 +163,9 @@
             }
         }
 
+        /**
+         * Reset the status filter to 'ALL'.
+         */
         function resetFilters() {
             currentStatusFilter = 'all';
             const btns = document.querySelectorAll('.filter-btn');
@@ -165,6 +180,9 @@
             });
         }
 
+        /**
+         * Fetch flight data from the backend API with current filters and search query.
+         */
         async function fetchFlights() {
             try {
                 const response = await fetch(`/api/flights?arrival=${isArrival}&status=${currentStatusFilter}&query=${encodeURIComponent(searchQuery)}`);
@@ -175,6 +193,9 @@
             }
         }
 
+        /**
+         * Render the flight data into the HTML table.
+         */
         function renderFlights(data) {
             const tbody = document.getElementById('flight-table-body');
             if (data.length === 0) {
@@ -197,6 +218,9 @@
             `).join('');
         }
 
+        /**
+         * Update the clock and date display in the header.
+         */
         function updateTime() {
             const now = new Date();
             document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
@@ -204,8 +228,13 @@
             document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
         }
 
+        /**
+         * Handle clicking on a status filter button.
+         */
         function filterStatus(status, event) {
             currentStatusFilter = status;
+            
+            // Update button styles to show active filter
             const btns = document.querySelectorAll('.filter-btn');
             btns.forEach(btn => {
                 btn.classList.remove('bg-gray-900', 'text-white');
@@ -219,6 +248,9 @@
             fetchFlights();
         }
 
+        /**
+         * Handle search input with debouncing to limit API calls.
+         */
         function handleSearch() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
@@ -227,11 +259,17 @@
             }, 300);
         }
 
-        // Initialize
+        // Initialize application on load
         updateTime();
         updateFilters();
+        
+        // Update time every second
         setInterval(updateTime, 1000);
+        
+        // Initial data fetch
         fetchFlights();
+        
+        // Refresh data every 60 seconds
         setInterval(() => fetchFlights(), 60000);
     </script>
 </body>

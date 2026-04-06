@@ -1,8 +1,21 @@
 from abc import ABC, abstractmethod
 
 class Flight(ABC):
+    """
+    Abstract base class representing a generic flight.
+    Handles common flight data like time, ID, airline, and terminal.
+    """
     def __init__(self, raw_data):
+        """
+        Initialize a flight object from raw API data.
+        
+        Args:
+            raw_data (dict): Dictionary containing raw flight information from HKIA API.
+        """
+        # Scheduled time of the flight (format: HH:MM)
         self.scheduled_time = raw_data.get('time', '00:00')
+        
+        # Extract flight ID and airline from the nested list
         flights = raw_data.get('flight', [])
         if flights:
             self.flight_id = flights[0].get('no', 'N/A')
@@ -11,27 +24,40 @@ class Flight(ABC):
             self.flight_id = 'N/A'
             self.airline = 'N/A'
         
+        # Gate and terminal information
         self.gate = raw_data.get('gate', '---') or '---'
         self.terminal = raw_data.get('terminal', 'T1')
         self.raw_status = raw_data.get('status', '')
         
-        # Initialize location and status which are handled by subclasses
+        # Specific fields handled by subclasses via abstract methods
         self.location = self._extract_location(raw_data)
         self.status_text, self.status_class = self._map_status(self.raw_status)
 
     @abstractmethod
     def _extract_location(self, raw_data):
+        """
+        Extract flight origin or destination depending on flight type.
+        """
         pass
 
     @abstractmethod
     def _map_status(self, raw):
+        """
+        Map raw status string to a normalized display text and CSS class.
+        """
         pass
 
     @abstractmethod
     def get_type(self):
+        """
+        Return the flight type (Arrival or Departure).
+        """
         pass
 
     def to_dict(self):
+        """
+        Convert flight object to a dictionary for JSON serialization.
+        """
         return {
             "time": self.scheduled_time,
             "id": self.flight_id,
@@ -45,11 +71,20 @@ class Flight(ABC):
         }
 
 class ArrivalFlight(Flight):
+    """
+    Represents an arriving flight.
+    """
     def _extract_location(self, raw_data):
+        """
+        Extract origins for arrival flights.
+        """
         origins = raw_data.get('origin', [])
         return " / ".join(origins)
 
     def _map_status(self, raw):
+        """
+        Map arrival-specific statuses like Landed, Arrived, etc.
+        """
         if not raw:
             return "ON TIME", "status-on-time"
         
@@ -69,11 +104,20 @@ class ArrivalFlight(Flight):
         return "Arrival"
 
 class DepartureFlight(Flight):
+    """
+    Represents a departing flight.
+    """
     def _extract_location(self, raw_data):
+        """
+        Extract destinations for departure flights.
+        """
         destinations = raw_data.get('destination', [])
         return " / ".join(destinations)
 
     def _map_status(self, raw):
+        """
+        Map departure-specific statuses like Boarding, Gate Closed, etc.
+        """
         if not raw:
             return "ON TIME", "status-on-time"
         
